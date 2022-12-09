@@ -7,9 +7,10 @@ import pygame
 import numpy as np
 from enums import GridTile, Action, Observation, action_to_direction
 
+
 class GridWorldEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
-    
+
     # Observations are dictionaries with the state space, in this case the agent's view around itself
     # Each location is encoded as an element of {0, ..., `size`}
     observation_space = spaces.Dict({
@@ -19,7 +20,7 @@ class GridWorldEnv(gym.Env):
         Observation.LEFT:  spaces.Discrete(7),
         Observation.RIGHT: spaces.Discrete(7)
     })
-        
+
     def __init__(self, render_mode=None, size=5):
 
         self.size = size  # The size of the square grid
@@ -28,7 +29,7 @@ class GridWorldEnv(gym.Env):
         val, grid = self.generate_grid(self.size)
         while (val == False):
             val = self.generate_grid(self.size)
-        
+
         self.grid = grid
 
         self.print_grid(grid)
@@ -48,13 +49,20 @@ class GridWorldEnv(gym.Env):
         """
         self.window = None
         self.clock = None
-        
+
     def _get_obs(self):
+        cur = self._agent_location
+        next_states = np.array([cur + action_to_direction[Action.WALK_UP  ], cur + action_to_direction[Action.WALK_DOWN ],
+                                cur + action_to_direction[Action.WALK_LEFT], cur + action_to_direction[Action.WALK_RIGHT]])
+        clamped = np.clip(next_states, 0, self.size - 1)
+        next_gs = [self.grid[tuple(x)] for x in clamped]
+        next_gs = np.where(next_gs == GridTile.WALL , GridTile.WALL, next_gs)
         return {
             Observation.UP: {self.grid[self._agent_location + action_to_direction[Action.WALK_UP]]},
             Observation.DOWN: {self.grid[self._agent_location + action_to_direction[Action.WALK_DOWN]]},
             Observation.LEFT: {self.grid[self._agent_location + action_to_direction[Action.WALK_LEFT]]},
-            Observation.RIGHT: {self.grid[self._agent_location + action_to_direction[Action.WALK_RIGHT]]}
+            Observation.RIGHT: {
+                self.grid[self._agent_location + action_to_direction[Action.WALK_RIGHT]]}
         }
 
     def generate_grid(self, size):
@@ -75,17 +83,18 @@ class GridWorldEnv(gym.Env):
         visited = [(0, 0)]
         stack = [(0, 0)]
         parent = {}
-        
+
         while len(stack) != 0:
             u = stack.pop()
-            neighbors = np.array([[u[0]+1, u[1]], [u[0]-1, u[1]], [u[0], u[1]+1], [u[0], u[1]-1]])
+            neighbors = np.array(
+                [[u[0]+1, u[1]], [u[0]-1, u[1]], [u[0], u[1]+1], [u[0], u[1]-1]])
             for n in neighbors:
                 if n[0] >= 0 and n[1] >= 0 and n[0] < size and n[1] < size and grid[tuple(n)] != GridTile.WALL and tuple(n) not in visited:
                     visited.append(tuple(n))
                     parent[tuple(n)] = u
                     stack.append(tuple(n))
-        
-        cur = (4,4)
+
+        cur = (4, 4)
         visited = []
         if cur not in visited:
             return False, grid
@@ -124,7 +133,7 @@ class GridWorldEnv(gym.Env):
         # Map the action (element of {0,1,2,3}) to the direction we walk in
         direction = action_to_direction[action]
         reward = -1
-        
+
         # Determine the new location (check for walls on bounds)
         new_loc = self._agent_location+direction
         clipped_loc = np.clip(new_loc, 0, self.size-1)
@@ -132,7 +141,7 @@ class GridWorldEnv(gym.Env):
         if not np.array_equal(new_loc, clipped_loc):
             new_cell = GridTile.WALL
         new_loc = clipped_loc
-            
+
         # If open, don't move and open the door
         if action == Action.OPEN_UP or action == Action.OPEN_DOWN or action == Action.OPEN_LEFT or action == Action.OPEN_RIGHT:
             new_loc = self._agent_location
@@ -163,8 +172,8 @@ class GridWorldEnv(gym.Env):
                 reward = -3
             elif new_cell == GridTile.WATER:
                 reward = -2
-        
-        # Update the location of the agent        
+
+        # Update the location of the agent
         self._agent_location = new_loc
 
         # An episode is done iff the agent has reached the target
