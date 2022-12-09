@@ -6,6 +6,7 @@ from gym import spaces
 import pygame
 import numpy as np
 from enums import GridTile, Action, Observation, action_to_direction
+from worlds import world1, world2
 
 
 class GridWorldEnv(gym.Env):
@@ -21,18 +22,20 @@ class GridWorldEnv(gym.Env):
         Observation.RIGHT: spaces.Discrete(7)
     })
 
-    def __init__(self, render_mode=None, size=5):
+    def __init__(self, world=None, render_mode=None, size=5):
 
         self.size = size  # The size of the square grid
         self.window_size = 512  # The size of the PyGame window
 
-        val, grid = self.generate_grid(self.size)
-        while (val == False):
-            val = self.generate_grid(self.size)
+        if world is None:
+            val, grid = self.generate_grid(self.size)
+            while (val == False):
+                val = self.generate_grid(self.size)
+            self.grid = grid
+        else:
+            self.grid = world
 
-        self.grid = grid
-
-        self.print_grid(grid)
+        self.print_grid(self.grid)
 
         # We have 16 actions
         self.action_space = spaces.Discrete(16)
@@ -49,6 +52,8 @@ class GridWorldEnv(gym.Env):
         """
         self.window = None
         self.clock = None
+        
+        self.reset()
 
     def _get_obs(self):
         cur = self._agent_location
@@ -184,12 +189,12 @@ class GridWorldEnv(gym.Env):
         terminated = np.array_equal(
             self._agent_location, self._target_location)
         observation = self._get_obs()
-        info = self._get_info()
+        # info = self._get_info()
 
         if self.render_mode == "human":
             self._render_frame()
 
-        return observation, reward, terminated, False, info
+        return observation, reward, terminated, False, None
 
     def render(self):
         if self.render_mode == "rgb_array":
@@ -274,13 +279,11 @@ class GridWorldEnv(gym.Env):
 
 
 if __name__ == "__main__":
-    env = GridWorldEnv()
-    observation, info = env.reset(seed=42)
-
-    for _ in range(1000):
-        observation, reward, terminated, truncated, info = env.step(env.action_space.sample())
-
-        if terminated or truncated:
-            observation, info = env.reset()
+    env = GridWorldEnv(world1)
+    print(env._agent_location)
+    env.step(Action.WALK_DOWN)
+    print(env._agent_location)
+    env.step(Action.WALK_DOWN)
+    print(env._agent_location)
 
     env.close()
