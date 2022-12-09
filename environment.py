@@ -119,31 +119,36 @@ class GridWorldEnv(gym.Env):
         }
 
     def generate_grid(self, size):
-        grid = np.zeros((size, size))
+        grid = np.zeros((size, size), dtype=GridTile)
         wall_count = 4
 
         door_loc = np.random.randint(0, size, 2)
         swim_loc = np.random.randint(0, size, 2)
         rock_loc = np.random.randint(0, size, 2)
 
-        grid[door_loc] = GridTile.DOOR_CLOSED.value
-        grid[swim_loc] = GridTile.WATER.value
-        grid[rock_loc] = GridTile.ROCK.value
+        grid[door_loc] = GridTile.DOOR_CLOSED
+        grid[swim_loc] = GridTile.WATER
+        grid[rock_loc] = GridTile.ROCK
 
         for i in range(wall_count):
-            grid[np.random.randint(0, size, 2)] = GridTile.WALL.value
+            grid[np.random.randint(0, size, 2)] = GridTile.WALL
 
-        dist_list = np.full((size, size), math.inf)
-        unvisited = np.ones((size, size))
+        dist_list = {}
+        unvisited = {}
         parent = {}
+        q = []
 
-        q = np.zeros((size, size))
-        q[0,0] = 1
+        for x in range(size):
+            for y in range(size):
+                dist_list[x,y] = 10000
+                parent[x,y] = 0
+                q.append([x,y])
+        dist_list[0,0] = 0
 
-        dist_list[0, 0] = 0
+        while len(q) != 0:
+            u = 
 
-        while np.any(q == 1):
-            u = np.argmin(dist_list * q)
+
 
         return grid
 
