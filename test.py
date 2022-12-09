@@ -1,5 +1,7 @@
 import numpy as np
 
-a1 = np.arange(5)
+a1 = np.arange(25).reshape(5,5)
 
-print(a1.reshape(-1,1) @ a1.reshape(1,-1))
+cord_1 = np.array([2,2])
+diff = np.array([1,1])
+print(a1[tuple(cord_1+diff)],a1)

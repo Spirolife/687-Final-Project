@@ -19,10 +19,10 @@ class GridTile(Enum):
 
 
 class Action(Enum):
-    UP = 0
-    LEFT = 1
-    DOWN = 2
-    RIGHT = 3
+    WALK_UP = 0
+    WALK_LEFT = 1
+    WALK_DOWN = 2
+    WALK_RIGHT = 3
 
     OPEN_UP = 4
     OPEN_LEFT = 5
@@ -56,10 +56,10 @@ class GridWorldEnv(gym.Env):
         I.e. 0 corresponds to "up" etc.
         """
     _action_to_direction = {
-        Action.UP:    np.array([-1, 0]),
-        Action.LEFT:  np.array([0, -1]),
-        Action.DOWN:  np.array([1, 0]),
-        Action.RIGHT: np.array([0, 1]),
+        Action.WALK_UP:    np.array([-1, 0]),
+        Action.WALK_LEFT:  np.array([0, -1]),
+        Action.WALK_DOWN:  np.array([1, 0]),
+        Action.WALK_RIGHT: np.array([0, 1]),
 
         Action.OPEN_UP: np.array([-1, 0]),
         Action.OPEN_LEFT: np.array([0, -1]),
@@ -112,10 +112,10 @@ class GridWorldEnv(gym.Env):
         
     def _get_obs(self):
         return {
-            OBSERVATION.UP: {self.grid[self._agent_location + self._action_to_direction[Action.UP]]},
-            OBSERVATION.DOWN: {self.grid[self._agent_location + self._action_to_direction[Action.DOWN]]},
-            OBSERVATION.LEFT: {self.grid[self._agent_location + self._action_to_direction[Action.LEFT]]},
-            OBSERVATION.RIGHT: {self.grid[self._agent_location + self._action_to_direction[Action.RIGHT]]}
+            OBSERVATION.UP: {self.grid[self._agent_location + self._action_to_direction[Action.WALK_UP]]},
+            OBSERVATION.DOWN: {self.grid[self._agent_location + self._action_to_direction[Action.WALK_DOWN]]},
+            OBSERVATION.LEFT: {self.grid[self._agent_location + self._action_to_direction[Action.WALK_LEFT]]},
+            OBSERVATION.RIGHT: {self.grid[self._agent_location + self._action_to_direction[Action.WALK_RIGHT]]}
         }
 
     def generate_grid(self, size):
@@ -175,32 +175,56 @@ class GridWorldEnv(gym.Env):
 
         return observation, info
 
-    def get_next_state(self, action):
-        if action == Action.OPEN_UP or action == Action.OPEN_DOWN or action == Action.OPEN_LEFT or action == Action.OPEN_RIGHT:
-            direction = self._action_to_direction[action]
-            if self.grid[self._agent_location + self._action_to_direction[Action.UP]] == GridTile.DOOR_CLOSED:
-                self.grid[self._agent_location + self._action_to_direction[Action.UP]] = GridTile.DOOR_OPEN
-            return self._agent_location
-        if action == Action.OPEN_DOWN:
-            if self.grid[self._agent_location + self._action_to_direction[Action.DOWN]] == GridTile.DOOR_CLOSED:
-                self.grid[self._agent_location + self._action_to_direction[Action.DOWN]] = GridTile.DOOR_OPEN
-            return self._agent_location
-
     def step(self, action):
         # Map the action (element of {0,1,2,3}) to the direction we walk in
         direction = self._action_to_direction[action]
-
-        new_loc = self._agent_location + direction
-        # We use `np.clip` to make sure we don't leave the grid
-        new_loc = np.clip(new_loc, 0, self.size - 1)
-        if self.grid[tuple(new_loc)] == GridTile.WALL:
-            # We can't walk into walls
+        reward = -1
+        
+        # Determine the new location (check for walls on bounds)
+        new_loc = self._agent_location+direction
+        clipped_loc = np.clip(new_loc, 0, self.size-1)
+        new_cell = self.grid[tuple(clipped_loc)]
+        if not np.array_equal(new_loc, clipped_loc):
+            new_cell = GridTile.WALL
+        new_loc = clipped_loc
+            
+        # If open, don't move and open the door
+        if action == Action.OPEN_UP or action == Action.OPEN_DOWN or action == Action.OPEN_LEFT or action == Action.OPEN_RIGHT:
             new_loc = self._agent_location
+            if new_cell == GridTile.DOOR_CLOSED:
+                new_cell = GridTile.DOOR_OPEN
+                reward = -0.5
+            else:
+                reward = -3
+        # If jump, move unless blocked by door or wall
+        elif action == Action.JUMP_UP or action == Action.JUMP_DOWN or action == Action.JUMP_LEFT or action == Action.JUMP_RIGHT:
+            if new_cell == GridTile.ROCK:
+                reward = -0.5
+            else:
+                reward = -3
+                if new_cell == GridTile.DOOR_CLOSED or new_cell == GridTile.WALL:
+                    new_loc = self._agent_location
+        # If swim, move if into water, otherwise don't move
+        elif action == Action.SWIM_UP or action == Action.SWIM_DOWN or action == Action.SWIM_LEFT or action == Action.SWIM_RIGHT:
+            if new_cell == GridTile.WATER:
+                reward = -0.5
+            else:
+                reward = -3
+                new_loc = self._agent_location
+        # If walk, move unless blocked by door or wall. Higher penalty for water
+        elif action == Action.WALK_UP or action == Action.WALK_DOWN or action == Action.WALK_LEFT or action == Action.WALK_RIGHT:
+            if new_cell == GridTile.WALL or new_cell == GridTile.DOOR_CLOSED or new_cell == GridTile.ROCK:
+                new_loc = self._agent_location
+                reward = -3
+            elif new_cell == GridTile.WATER:
+                reward = -2
+        
+        # Update the location of the agent        
+        self._agent_location = new_loc
 
         # An episode is done iff the agent has reached the target
         terminated = np.array_equal(
             self._agent_location, self._target_location)
-        reward = 1 if terminated else 0  # Binary sparse rewards
         observation = self._get_obs()
         info = self._get_info()
 
