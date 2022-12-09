@@ -92,7 +92,12 @@ class GridWorldEnv(gym.Env):
 
         self.size = size  # The size of the square grid
         self.window_size = 512  # The size of the PyGame window
-        self.grid = self.generate_grid(self.size)
+
+        val, grid = self.generate_grid(self.size)
+        while (val == False):
+            val = self.generate_grid(self.size)
+        
+        self.grid = grid
 
         # We have 16 actions
         self.action_space = spaces.Discrete(16)
@@ -126,31 +131,35 @@ class GridWorldEnv(gym.Env):
         swim_loc = np.random.randint(0, size, 2)
         rock_loc = np.random.randint(0, size, 2)
 
-        grid[door_loc] = GridTile.DOOR_CLOSED
-        grid[swim_loc] = GridTile.WATER
-        grid[rock_loc] = GridTile.ROCK
+        grid[tuple(door_loc)] = GridTile.DOOR_CLOSED
+        grid[tuple(swim_loc)] = GridTile.WATER
+        grid[tuple(rock_loc)] = GridTile.ROCK
 
         for i in range(wall_count):
-            grid[np.random.randint(0, size, 2)] = GridTile.WALL
+            grid[tuple(np.random.randint(0, size, 2))] = GridTile.WALL
 
-        dist_list = {}
-        unvisited = {}
+        visited = [(0, 0)]
+        stack = [(0, 0)]
         parent = {}
-        q = []
+        
+        while len(stack) != 0:
+            u = stack.pop()
+            neighbors = np.array([[u[0]+1, u[1]], [u[0]-1, u[1]], [u[0], u[1]+1], [u[0], u[1]-1]])
+            for n in neighbors:
+                if n[0] >= 0 and n[1] >= 0 and n[0] < size and n[1] < size and grid[tuple(n)] != GridTile.WALL and tuple(n) not in visited:
+                    visited.append(tuple(n))
+                    parent[tuple(n)] = u
+                    stack.append(tuple(n))
+        
+        cur = (4,4)
+        visited = []
+        while cur != (0,0):
+            cur = parent[cur[0], cur[1]]
+            visited.append(cur)
+            if len(visited) > size**2:
+                return False, grid
 
-        for x in range(size):
-            for y in range(size):
-                dist_list[x,y] = 10000
-                parent[x,y] = 0
-                q.append([x,y])
-        dist_list[0,0] = 0
-
-        while len(q) != 0:
-            u = 
-
-
-
-        return grid
+        return True, grid
 
     def reset(self, seed=None, options=None):
         # We need the following line to seed self.np_random
