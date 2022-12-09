@@ -5,87 +5,19 @@ import gym
 from gym import spaces
 import pygame
 import numpy as np
-from enum import Enum
-
-
-class GridTile(Enum):
-    AIR = 0
-    WALL = 1
-    DOOR_OPEN = 2
-    DOOR_CLOSED = 3
-    ROCK = 4
-    WATER = 5
-    GOAL = 6
-
-
-class Action(Enum):
-    WALK_UP = 0
-    WALK_LEFT = 1
-    WALK_DOWN = 2
-    WALK_RIGHT = 3
-
-    OPEN_UP = 4
-    OPEN_LEFT = 5
-    OPEN_DOWN = 6
-    OPEN_RIGHT = 7
-
-    SWIM_UP = 8
-    SWIM_LEFT = 9
-    SWIM_DOWN = 10
-    SWIM_RIGHT = 11
-
-    JUMP_UP = 12
-    JUMP_LEFT = 13
-    JUMP_DOWN = 14
-    JUMP_RIGHT = 15
-
-
-class OBSERVATION(Enum):
-    UP = 0
-    LEFT = 1
-    DOWN = 2
-    RIGHT = 3
-
+from enums import GridTile, Action, Observation, action_to_direction
 
 class GridWorldEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
-    
-    """
-        The following dictionary maps abstract actions from `self.action_space` to 
-        the direction we will walk in if that action is taken.
-        I.e. 0 corresponds to "up" etc.
-        """
-    _action_to_direction = {
-        Action.WALK_UP:    np.array([-1, 0]),
-        Action.WALK_LEFT:  np.array([0, -1]),
-        Action.WALK_DOWN:  np.array([1, 0]),
-        Action.WALK_RIGHT: np.array([0, 1]),
-
-        Action.OPEN_UP: np.array([-1, 0]),
-        Action.OPEN_LEFT: np.array([0, -1]),
-        Action.OPEN_DOWN: np.array([1, 0]),
-        Action.OPEN_RIGHT: np.array([0, 1]),
-
-        Action.SWIM_UP: np.array([-1, 0]),
-        Action.SWIM_LEFT: np.array([0, -1]),
-        Action.SWIM_DOWN: np.array([1, 0]),
-        Action.SWIM_RIGHT: np.array([0, 1]),
-
-        Action.JUMP_UP: np.array([-1, 0]),
-        Action.JUMP_LEFT: np.array([0, -1]),
-        Action.JUMP_DOWN: np.array([1, 0]),
-        Action.JUMP_RIGHT: np.array([0, 1]),
-    }
-    
     
     # Observations are dictionaries with the state space, in this case the agent's view around itself
     # Each location is encoded as an element of {0, ..., `size`}
     observation_space = spaces.Dict({
         # GridTile
-        OBSERVATION.UP:    spaces.Discrete(7),
-        OBSERVATION.DOWN:  spaces.Discrete(7),
-        OBSERVATION.LEFT:  spaces.Discrete(7),
-        OBSERVATION.RIGHT: spaces.Discrete(7)
+        Observation.UP:    spaces.Discrete(7),
+        Observation.DOWN:  spaces.Discrete(7),
+        Observation.LEFT:  spaces.Discrete(7),
+        Observation.RIGHT: spaces.Discrete(7)
     })
         
     def __init__(self, render_mode=None, size=5):
@@ -117,10 +49,10 @@ class GridWorldEnv(gym.Env):
         
     def _get_obs(self):
         return {
-            OBSERVATION.UP: {self.grid[self._agent_location + self._action_to_direction[Action.WALK_UP]]},
-            OBSERVATION.DOWN: {self.grid[self._agent_location + self._action_to_direction[Action.WALK_DOWN]]},
-            OBSERVATION.LEFT: {self.grid[self._agent_location + self._action_to_direction[Action.WALK_LEFT]]},
-            OBSERVATION.RIGHT: {self.grid[self._agent_location + self._action_to_direction[Action.WALK_RIGHT]]}
+            Observation.UP: {self.grid[self._agent_location + action_to_direction[Action.WALK_UP]]},
+            Observation.DOWN: {self.grid[self._agent_location + action_to_direction[Action.WALK_DOWN]]},
+            Observation.LEFT: {self.grid[self._agent_location + action_to_direction[Action.WALK_LEFT]]},
+            Observation.RIGHT: {self.grid[self._agent_location + action_to_direction[Action.WALK_RIGHT]]}
         }
 
     def generate_grid(self, size):
@@ -186,7 +118,7 @@ class GridWorldEnv(gym.Env):
 
     def step(self, action):
         # Map the action (element of {0,1,2,3}) to the direction we walk in
-        direction = self._action_to_direction[action]
+        direction = action_to_direction[action]
         reward = -1
         
         # Determine the new location (check for walls on bounds)
