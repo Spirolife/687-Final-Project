@@ -126,12 +126,12 @@ class GridWorldEnv(gym.Env):
         swim_loc = np.random.randint(0, size, 2)
         rock_loc = np.random.randint(0, size, 2)
 
-        grid[door_loc] = GridTile.DOOR_CLOSED
-        grid[swim_loc] = GridTile.WATER
-        grid[rock_loc] = GridTile.ROCK
+        grid[door_loc] = GridTile.DOOR_CLOSED.value
+        grid[swim_loc] = GridTile.WATER.value
+        grid[rock_loc] = GridTile.ROCK.value
 
         for i in range(wall_count):
-            grid[np.random.randint(0, size, 2)] = GridTile.WALL
+            grid[np.random.randint(0, size, 2)] = GridTile.WALL.value
 
         dist_list = np.full((size, size), math.inf)
         unvisited = np.ones((size, size))
@@ -143,7 +143,7 @@ class GridWorldEnv(gym.Env):
         dist_list[0, 0] = 0
 
         while np.any(q == 1):
-            u = np.argmin(dist_list * q)[0]
+            u = np.argmin(dist_list * q)
 
         return grid
 
