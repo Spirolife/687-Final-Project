@@ -31,6 +31,8 @@ class GridWorldEnv(gym.Env):
         
         self.grid = grid
 
+        self.print_grid(grid)
+
         # We have 16 actions
         self.action_space = spaces.Discrete(16)
 
@@ -56,7 +58,7 @@ class GridWorldEnv(gym.Env):
         }
 
     def generate_grid(self, size):
-        grid = np.zeros((size, size), dtype=GridTile)
+        grid = np.full((size, size), GridTile.AIR, dtype=GridTile)
         wall_count = 4
 
         door_loc = np.random.randint(0, size, 2)
@@ -85,6 +87,8 @@ class GridWorldEnv(gym.Env):
         
         cur = (4,4)
         visited = []
+        if cur not in visited:
+            return False, grid
         while cur != (0,0):
             cur = parent[cur[0], cur[1]]
             visited.append(cur)
@@ -240,6 +244,15 @@ class GridWorldEnv(gym.Env):
             return np.transpose(
                 np.array(pygame.surfarray.pixels3d(canvas)), axes=(1, 0, 2)
             )
+    
+    def print_grid(self, grid):
+        print("---------------------")
+        for x in range(grid.shape[0]):
+            for y in range(grid.shape[1]):
+                print("| " + str(grid[x,y].value) + " ", end="")
+            print("|")
+            print("---------------------")
+
 
     def close(self):
         if self.window is not None:
