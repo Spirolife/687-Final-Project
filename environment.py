@@ -52,17 +52,21 @@ class GridWorldEnv(gym.Env):
 
     def _get_obs(self):
         cur = self._agent_location
-        next_states = np.array([cur + action_to_direction[Action.WALK_UP  ], cur + action_to_direction[Action.WALK_DOWN ],
-                                cur + action_to_direction[Action.WALK_LEFT], cur + action_to_direction[Action.WALK_RIGHT]])
-        clamped = np.clip(next_states, 0, self.size - 1)
-        next_gs = [self.grid[tuple(x)] for x in clamped]
-        next_gs = np.where(next_gs == GridTile.WALL , GridTile.WALL, next_gs)
+        next_states = np.array([cur + action_to_direction[Action.WALK_UP  ], cur + action_to_direction[Action.WALK_LEFT],
+                                cur + action_to_direction[Action.WALK_DOWN], cur + action_to_direction[Action.WALK_RIGHT]])
+
+        obj_contents = []
+        for i, n in enumerate(next_states):
+            if n[0] < 0 or n[1] < 0 or n[0] >= self.size or n[1] >= self.size:
+                obj_contents.append(GridTile.WALL)
+            else:
+                obj_contents.append(self.grid[tuple(next_states[i])])
+
         return {
-            Observation.UP: {self.grid[self._agent_location + action_to_direction[Action.WALK_UP]]},
-            Observation.DOWN: {self.grid[self._agent_location + action_to_direction[Action.WALK_DOWN]]},
-            Observation.LEFT: {self.grid[self._agent_location + action_to_direction[Action.WALK_LEFT]]},
-            Observation.RIGHT: {
-                self.grid[self._agent_location + action_to_direction[Action.WALK_RIGHT]]}
+            Observation.UP: {obj_contents[0]},
+            Observation.LEFT: {obj_contents[1]},
+            Observation.LEFT: {obj_contents[2]},
+            Observation.RIGHT: {obj_contents[3]}
         }
 
     def generate_grid(self, size):
@@ -122,7 +126,7 @@ class GridWorldEnv(gym.Env):
             )
 
         observation = self._get_obs()
-        info = self._get_info()
+        info = None
 
         if self.render_mode == "human":
             self._render_frame()
@@ -270,4 +274,13 @@ class GridWorldEnv(gym.Env):
 
 
 if __name__ == "__main__":
-    GridWorldEnv()
+    env = GridWorldEnv()
+    observation, info = env.reset(seed=42)
+
+    for _ in range(1000):
+        observation, reward, terminated, truncated, info = env.step(env.action_space.sample())
+
+        if terminated or truncated:
+            observation, info = env.reset()
+
+    env.close()
