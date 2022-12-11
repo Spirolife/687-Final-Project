@@ -29,3 +29,14 @@ world5 = np.full((5, 5), GridTile.AIR)
 world5[4, 4] = GridTile.GOAL
 world5[1, 0] = GridTile.ROCK
 world5[4, 3] = GridTile.WALL
+
+world6 = np.full((7, 7), GridTile.AIR)
+world6[6, 6] = GridTile.GOAL
+world6[1, 1] = GridTile.WALL
+world6[1, 2] = GridTile.WATER
+world6[4, 2] = GridTile.WATER
+world6[1, 3] = GridTile.WALL
+world6[1, 4] = GridTile.WATER
+world6[4, 4] = GridTile.ROCK
+world6[5, 6] = GridTile.DOOR_CLOSED
+world6[6, 5] = GridTile.DOOR_CLOSED
