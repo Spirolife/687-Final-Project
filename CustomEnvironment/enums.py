@@ -1,14 +1,19 @@
 from enum import Enum
 import numpy as np
 
+
 class GridTile(Enum):
+    # AIR
     AIR = 0
+    # PLACEABLE
     WALL = 1
-    DOOR_OPEN = 2
-    DOOR_CLOSED = 3
-    ROCK = 4
-    WATER = 5
+    DOOR_CLOSED = 2
+    ROCK = 3
+    WATER = 4
+    # RESERVED (DONT PLACE)
+    DOOR_OPEN = 5
     GOAL = 6
+    START = 7
 
 
 class Action(Enum):
@@ -38,7 +43,8 @@ class Observation(Enum):
     LEFT = 1
     DOWN = 2
     RIGHT = 3
-    
+
+
 """
     The following dictionary maps abstract actions from `self.action_space` to 
     the direction we will walk in if that action is taken.

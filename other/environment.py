@@ -1,8 +1,8 @@
 # Created by Alenna Spiro and Kobi Falus
 
 import math
-import gym
-from gym import spaces
+import gymnasium as gym
+from gymnasium import spaces
 import pygame
 import numpy as np
 from enums import GridTile, Action, Observation, action_to_direction
@@ -52,12 +52,12 @@ class GridWorldEnv(gym.Env):
         """
         self.window = None
         self.clock = None
-        
+
         self.reset()
 
     def _get_obs(self):
         cur = self._agent_location
-        next_states = np.array([cur + action_to_direction[Action.WALK_UP  ], cur + action_to_direction[Action.WALK_LEFT],
+        next_states = np.array([cur + action_to_direction[Action.WALK_UP], cur + action_to_direction[Action.WALK_LEFT],
                                 cur + action_to_direction[Action.WALK_DOWN], cur + action_to_direction[Action.WALK_RIGHT]])
 
         obj_contents = []
@@ -107,7 +107,7 @@ class GridWorldEnv(gym.Env):
         visited = []
         if cur not in visited:
             return False, grid
-        while cur != (0,0):
+        while cur != (0, 0):
             cur = parent[cur[0], cur[1]]
             visited.append(cur)
             if len(visited) > size**2:
@@ -262,15 +262,14 @@ class GridWorldEnv(gym.Env):
             return np.transpose(
                 np.array(pygame.surfarray.pixels3d(canvas)), axes=(1, 0, 2)
             )
-    
+
     def print_grid(self, grid):
         print("---------------------")
         for x in range(grid.shape[0]):
             for y in range(grid.shape[1]):
-                print("| " + str(grid[x,y].value) + " ", end="")
+                print("| " + str(grid[x, y].value) + " ", end="")
             print("|")
             print("---------------------")
-
 
     def close(self):
         if self.window is not None:
