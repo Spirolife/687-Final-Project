@@ -22,31 +22,35 @@ class GridWorldEnv(gym.Env):
         3: spaces.Discrete(7)
     })
 
-    def __init__(self, world=None, render_mode=None, size=5):
+    action_space = spaces.Discrete(16)
+    window_size = 512  # The size of the PyGame window
 
-        self.np_random, seed = gym.utils.seeding.np_random()
-        self.window_size = 512  # The size of the PyGame window
-
-        self.preset_world = world
-
-        # We have 16 actions
-        self.action_space = spaces.Discrete(16)
-
-        assert render_mode is None or render_mode in self.metadata["render_modes"]
-        self.render_mode = render_mode
-
-        """
+    """
         If human-rendering is used, `self.window` will be a reference
         to the window that we draw to. `self.clock` will be a clock that is used
         to ensure that the environment is rendered at the correct framerate in
         human-mode. They will remain `None` until human-mode is used for the
         first time.
-        """
-        self.window = None
-        self.clock = None
+    """
+    window = None
+    clock = None
+
+    def __init__(self, world=None, render_mode=None, size=5):
+
+        self.np_random, seed = gym.utils.seeding.np_random()
+
+        self.preset_world = world
+
+        assert render_mode is None or render_mode in self.metadata["render_modes"]
+        self.render_mode = render_mode
 
         self.reset()
         self.print_grid(self.grid)
+
+    def set_world(self, world=None):
+        self.preset_world = world
+        self.reset()
+        # self.print_grid(self.grid)
 
     def grid_to_nums(self, grid):
         flat = grid.flatten()
@@ -98,7 +102,7 @@ class GridWorldEnv(gym.Env):
         while not been_validated:
             cur_grid = grid.copy()
             # Generate random things
-            for _ in range(12):
+            for _ in range(self.RAND_SIZE*2):
                 cell = tuple(np.random.randint(0, size, 2))
                 if cur_grid[cell] == GridTile.AIR:
                     cur_grid[cell] = GridTile(np.random.randint(1, 5))
@@ -167,6 +171,8 @@ class GridWorldEnv(gym.Env):
         elif action == Action.JUMP_UP or action == Action.JUMP_DOWN or action == Action.JUMP_LEFT or action == Action.JUMP_RIGHT:
             if new_cell == GridTile.ROCK:
                 reward = -1.5
+            elif new_cell == GridTile.GOAL:
+                reward = -0.5
             else:
                 reward = -3
                 if new_cell == GridTile.DOOR_CLOSED or new_cell == GridTile.WALL:
@@ -175,6 +181,8 @@ class GridWorldEnv(gym.Env):
         elif action == Action.SWIM_UP or action == Action.SWIM_DOWN or action == Action.SWIM_LEFT or action == Action.SWIM_RIGHT:
             if new_cell == GridTile.WATER:
                 reward = -1.5
+            elif new_cell == GridTile.GOAL:
+                reward = -0.5
             else:
                 reward = -3
                 new_loc = self._agent_location
@@ -185,6 +193,8 @@ class GridWorldEnv(gym.Env):
                 reward = -5
             elif new_cell == GridTile.WATER:
                 reward = -4
+            elif new_cell == GridTile.GOAL:
+                reward = 0
         else:
             raise ValueError("Invalid action")
 
