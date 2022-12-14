@@ -164,13 +164,13 @@ class GridWorldEnv(gym.Env):
             new_loc = self._agent_location
             if new_cell == GridTile.DOOR_CLOSED:
                 self.grid[tuple(clipped_loc)] = GridTile.DOOR_OPEN
-                reward = -1.5
+                reward = -0.5
             else:
                 reward = -3
         # If jump, move unless blocked by door or wall
         elif action == Action.JUMP_UP or action == Action.JUMP_DOWN or action == Action.JUMP_LEFT or action == Action.JUMP_RIGHT:
             if new_cell == GridTile.ROCK:
-                reward = -1.5
+                reward = -0.5
             elif new_cell == GridTile.GOAL:
                 reward = -0.5
             else:
@@ -180,7 +180,7 @@ class GridWorldEnv(gym.Env):
         # If swim, move if into water, otherwise don't move
         elif action == Action.SWIM_UP or action == Action.SWIM_DOWN or action == Action.SWIM_LEFT or action == Action.SWIM_RIGHT:
             if new_cell == GridTile.WATER:
-                reward = -1.5
+                reward = -0.5
             elif new_cell == GridTile.GOAL:
                 reward = -0.5
             else:
@@ -190,9 +190,9 @@ class GridWorldEnv(gym.Env):
         elif action == Action.WALK_UP or action == Action.WALK_DOWN or action == Action.WALK_LEFT or action == Action.WALK_RIGHT:
             if new_cell == GridTile.WALL or new_cell == GridTile.DOOR_CLOSED or new_cell == GridTile.ROCK:
                 new_loc = self._agent_location
-                reward = -5
+                reward = -3
             elif new_cell == GridTile.WATER:
-                reward = -4
+                reward = -3
             elif new_cell == GridTile.GOAL:
                 reward = 0
         else:
