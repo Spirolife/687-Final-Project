@@ -8,7 +8,6 @@ import numpy as np
 from enums import GridTile, Action, Observation, action_to_direction
 from worlds import world1, world2
 
-
 class GridWorldEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
@@ -171,8 +170,6 @@ class GridWorldEnv(gym.Env):
         elif action == Action.JUMP_UP or action == Action.JUMP_DOWN or action == Action.JUMP_LEFT or action == Action.JUMP_RIGHT:
             if new_cell == GridTile.ROCK:
                 reward = -0.5
-            elif new_cell == GridTile.GOAL:
-                reward = -0.5
             else:
                 reward = -3
                 if new_cell == GridTile.DOOR_CLOSED or new_cell == GridTile.WALL:
@@ -180,8 +177,6 @@ class GridWorldEnv(gym.Env):
         # If swim, move if into water, otherwise don't move
         elif action == Action.SWIM_UP or action == Action.SWIM_DOWN or action == Action.SWIM_LEFT or action == Action.SWIM_RIGHT:
             if new_cell == GridTile.WATER:
-                reward = -0.5
-            elif new_cell == GridTile.GOAL:
                 reward = -0.5
             else:
                 reward = -3
