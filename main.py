@@ -7,6 +7,10 @@ import CustomEnvironment.worlds as worlds
 from enums import GridTile, Action, Observation, action_to_direction
 from scipy.special import softmax
 from matplotlib import pyplot as plt
+import gym_toytext
+from queue import PriorityQueue
+from collections import defaultdict
+import time
 
 # observation, info = env.reset()
 
@@ -22,21 +26,28 @@ from matplotlib import pyplot as plt
 
 # env.close()
 
-
 class Agent:
-    def __init__(self, world=None):
-        self.env = gym.make("GridWorldEnv-v0", world=world)
-        self.Q = np.zeros((7, 7, 7, 7, 16))
-        self.V = np.zeros((7, 7, 7, 7))
-        self.P = np.zeros((7, 7, 7, 7))
-        self.set_rand_size(4)
+    def __init__(self, problem, world=None):
+        if problem == "grid":
+            self.env = gym.make("GridWorldEnv-v0", world=world)
+            size = [x.n for x in self.env.observation_space.values()]
+            size.append(self.env.action_space.n)
+            size = tuple(size)
+            self.Q = np.zeros(size)
+            self.P = np.zeros([x.n for x in self.env.observation_space.values()])
+        else:
+            self.env = gym.make("Roulette-v0")
+            self.Q = np.zeros((self.env.observation_space.n, self.env.action_space.n))
+            self.P = np.zeros(self.env.observation_space.n)
 
-        # For Actor-Critic
+        self.problem = problem
+        self.set_rand_size(4)
+    # For Actor-Critic
         # self.AC_P = np.zeros(())
 
     TIMEOUT = 1000
 
-    def q_learn(self, episodes=1000, gamma=1, alpha=0.1, epsilon='decay'):
+    def q_learn(self, episodes=1000, gamma=0.5, alpha=0.1, epsilon=0.3):
         if epsilon == 'decay':
             def epsilon_fn(x): return 1 / (x + 1)
         else:
@@ -46,7 +57,10 @@ class Agent:
         rewards = []
 
         for episode in tqdm(range(episodes)):
-            state, info = self.env.reset()
+            if self.problem == "roulette":
+                state = self.env.reset()
+            else:
+                state, info = self.env.reset()
             done = False
             count = 0
             cur_reward = 0
@@ -56,10 +70,15 @@ class Agent:
                     action = self.env.action_space.sample()
                 else:
                     action = np.random.choice(
-                        np.arange(16), p=softmax(self.Q[state]))
+                        np.arange(self.env.action_space.n), p=softmax(self.Q[state]))
+
+                if state == (0,0,0,0) and episode > 700:
+                    # print(self.Q[state])
+                     pass
 
                 next_state, reward, done, _ = self.env.step(action)
                 cur_reward += reward
+
                 self.Q[state][action] = self.Q[state][action] + alpha * \
                     (reward + gamma *
                      np.max(self.Q[next_state]) - self.Q[state][action])
@@ -79,7 +98,10 @@ class Agent:
             # timesteps x [state action reward]
             seen_sa = []
             trajectory = []
-            state, info = self.env.reset()
+            if problem == 'roulette':
+                state = self.env.reset()
+            else:
+                state, info = self.env.reset()
             # print(state)
             done = False
             count = 0
@@ -135,7 +157,11 @@ class Agent:
         rewards = []
 
         for episode in tqdm(range(episodes)):
-            state, info = self.env.reset()
+            if problem == 'roulette':
+                state = self.env.reset()
+            else:
+                state, info = self.env.reset()
+
             done = False
             count = 0
             cur_reward = 0
@@ -144,22 +170,27 @@ class Agent:
                 action = self.env.action_space.sample()
             else:
                 action = np.random.choice(
-                    np.arange(16), p=softmax(self.Q[state]))
+                    np.arange(self.env.action_space.n), p=softmax(self.Q[state] * 100))
 
             while not done and count < self.TIMEOUT:
                 count += 1
-
                 next_state, reward, done, _ = self.env.step(action)
                 cur_reward += reward
+
                 if np.random.random() < epsilon_fn(episode):
                     next_action = self.env.action_space.sample()
                 else:
                     next_action = np.random.choice(
-                        np.arange(16), p=softmax(self.Q[next_state]))
+                        np.arange(self.env.action_space.n), p=softmax(self.Q[next_state] * 100))
 
-                self.Q[state][action] = self.Q[state][action] + alpha * \
-                    (reward + gamma *
-                     self.Q[next_state][next_action] - self.Q[state][action])
+
+                if done:
+                    self.Q[state][action] = self.Q[state][action] + alpha * \
+                    (reward - self.Q[state][action])
+                else:
+                    self.Q[state][action] = self.Q[state][action] + alpha * \
+                        (reward + gamma * self.Q[next_state][next_action] - self.Q[state][action])
+
                 state = next_state
                 action = next_action
 
@@ -169,29 +200,35 @@ class Agent:
         return timesteps, rewards
 
     def sarsalambda(self, episodes=1000, gamma=0.9, alpha=0.1, lambda_decay=0.9):
-        e = np.zeros((7,7,7,7,16))
-        states_list = self.get_all_states(self.env.grid)
+        e = np.zeros(self.Q.shape)
+        if self.problem == 'roulette':
+            states_list = np.arange(self.env.observation_space.n)
+        else:
+            states_list = self.get_all_states(self.env.grid)
         timesteps = []
         rewards = []
 
         for episode in tqdm(range(episodes)):
-            state, info = self.env.reset()
+            if problem == 'roulette':
+                state = self.env.reset()
+            else:
+                state, info = self.env.reset()            
             done = False
             count = 0
             cur_reward = 0
-            action = np.random.choice(np.arange(16), p=softmax(self.Q[state]))
+            action = np.random.choice(np.arange(self.env.action_space.n), p=softmax(self.Q[state] * 100))
 
             while not done and count < self.TIMEOUT:
                 count += 1
                 next_state, reward, done, _ = self.env.step(action)
                 cur_reward += reward
-                next_action = np.random.choice(np.arange(16), p=softmax(self.Q[next_state]))
+                next_action = np.random.choice(np.arange(self.env.action_space.n), p=softmax(self.Q[next_state] * 100))
 
                 delta = reward + gamma * self.Q[next_state][next_action] - self.Q[state][action]
                 e[state][action] = e[state][action] + 1
 
                 for state in states_list:
-                    for a in range(16):
+                    for a in range(self.env.action_space.n):
                         self.Q[state][a] = self.Q[state][a] + alpha * delta * e[state][a]
                         e[state][a] = gamma * lambda_decay * e[state][a]
 
@@ -202,9 +239,69 @@ class Agent:
 
         return timesteps, rewards
 
+    def prioritize_sweep(self, episodes=1000, gamma=1, alpha=0.1, epsilon='decay', theta=2):
+
+            model = {}
+            model_back = defaultdict(set)
+            PQueue = PriorityQueue()
+
+            if epsilon == 'decay':
+                def epsilon_fn(x): return 1 / (x + 1)
+            else:
+                def epsilon_fn(_): return epsilon
+
+            timesteps = []
+            rewards = []
+
+            for episode in tqdm(range(episodes)):
+                reward_sum = 0
+                cur_state, info = self.env.reset()
+                done = False
+                count = 0
+                while not done and count < self.TIMEOUT:
+                    count += 1
+                    if np.random.random() < epsilon_fn(episode):
+                        action = self.env.action_space.sample()
+                    else:
+                        action = np.random.choice(
+                            np.arange(16), p=softmax(self.Q[cur_state]))
+
+                    next_state, reward, done, _ = self.env.step(action)
+                    reward_sum += reward
+
+                    model[(cur_state, action)] = (next_state, reward, done)
+                    model_back[next_state].add((cur_state, action, reward))
+
+                    priority = abs(
+                        reward + gamma * np.max(self.Q[next_state]) - self.Q[cur_state][action])
+
+                    if priority > theta:
+                        PQueue.put((priority, (cur_state, action)))
+
+                    limit = 5
+                    while not PQueue.empty() and limit > 0:
+                        limit -= 1
+                        _, (state, action) = PQueue.get()
+                        next_state, reward, _ = model[(state, action)]
+                        self.Q[state][action] = self.Q[state][action] + alpha * \
+                            (reward + gamma *
+                            np.max(self.Q[next_state]) - self.Q[state][action])
+                        for prev_state, prev_action, r in model_back[state]:
+                            priority = abs(
+                                r + gamma * np.max(self.Q[state]) - self.Q[prev_state][prev_action])
+                            if priority > theta:
+                                PQueue.put((priority, (prev_state, prev_action)))
+
+                timesteps.append(count)
+                rewards.append(reward_sum)
+            return timesteps, rewards
+
     def play(self, print_grid=True, print_res=True):
         # Get initial state
-        state, info = self.env.reset()
+        if self.problem == 'roulette':
+            state = self.env.reset()
+        else:
+            state, info = self.env.reset()
         done = False
         count = 0
         cumulative_reward = 0
@@ -217,7 +314,7 @@ class Agent:
         # For each timestep under the max limit
         while not done and count < self.play_limit:
             count += 1
-            action = np.random.choice(np.arange(16), p=softmax(self.Q[state]))
+            action = np.random.choice(np.arange(self.env.action_space.n), p=softmax(self.Q[state]))
             state, reward, done, _ = self.env.step(action)
 
             cumulative_reward += reward
@@ -228,11 +325,13 @@ class Agent:
 
         # Print results
         if print_res:
-            print("Start", self.env.env._start, "Count: ", count, "Reward: ", cumulative_reward)
+            if problem == 'roulette':
+                print("Count: ", count, "Reward: ", cumulative_reward)
+            else:
+                print("Start", self.env.env._start, "Count: ", count, "Reward: ", cumulative_reward)
 
         return count
 
-    #TODO make avgs for learning curves
     def play_many(self, world_count=10, sim_count=25):
         big_hist = []
         for _ in range(world_count):
@@ -242,7 +341,7 @@ class Agent:
 
     def set_rand_size(self, size):
         self.env.env.RAND_SIZE = size
-        self.play_limit = 200
+        self.play_limit = 100
         return size
 
     def get_rand_size(self):
@@ -288,7 +387,7 @@ class Agent:
 
 def print_policy(grid):
     for x in range(grid.shape[0]):
-        print("-------------------------")
+        print("-------------------------------")
         for y in range(grid.shape[1]):
             if grid[x][y] == -1:
                 print("||||||", end="")
@@ -330,7 +429,7 @@ def print_policy(grid):
                 print("| J>  ", end="")
 
         print("|")
-    print("-------------------------")
+    print("-------------------------------")
 
 def remove_outliers(data):
     medians = (data <= np.quantile(data, 0.8)) & (data >= np.quantile(data, 0.2))
@@ -350,50 +449,88 @@ def print_learning_curve(tntcomplete):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-r', '--run')
+    parser.add_argument('-p', '--problem')
     args = parser.parse_args()
     option = str(args.run)
+    problem = str(args.problem)
 
-    a = Agent()
+    a = Agent(problem)
 
-    # record of avg timesteps takene
-    hist = []
+    if problem == "grid":
+        # record of avg timesteps takene
+        hist = []
+        rewards = ""
 
-    size = a.set_rand_size(4)
-    for _ in range(1):
-        print(f"\nEpisode {_}")
-        if option == "qlearn":
-            tntcomplete, rewards = a.q_learn()
-        elif option == 'montecarlo':
-            tntcomplete, rewards = a.monte_carlo()
-        elif option == 'sarsa':
-            tntcomplete, rewards = a.sarsa()
-        elif option == 'sarsalambda':
-            tntcomplete, rewards = a.sarsalambda()
-        else:
-            print("Error: no algorithm selected.")
-            exit()
-        
-        # print_learning_curve(tntcomplete)
-        a.play(False, False)
-        games_cleaned = a.play_many(10)
+        size = a.set_rand_size(5)
+        for _ in range(100):
+            print(f"\nEpisode {_}")
+            if option == "Q Learning":
+                tntcomplete, rewards = a.q_learn()
+            elif option == 'First Visit Monte Carlo':
+                tntcomplete, rewards = a.monte_carlo()
+            elif option == 'SARSA':
+                tntcomplete, rewards = a.sarsa()
+            elif option == 'SARSA(L)':
+                tntcomplete, rewards = a.sarsalambda()
+            else:
+                print("Error: no algorithm selected.")
+                exit()
 
-        # games_cleaned = remove_outliers(games)
-
-        # mean timesteps taken
-        mean_count = round(games_cleaned.mean(),2)
-
-        print("Mean count: ", mean_count, "max", games_cleaned.max(), "limit", a.play_limit)
-
-        a.env.env.set_world()
-        hist.append(mean_count)
-
-    plt.title("Average Completion Time for Arbitrary Worlds")
-    plt.xlabel("Round")
-    plt.ylabel("Avg Completion Time")
-    plt.plot(np.arange(len(hist)), hist)
-    plt.show()
-
-    a.play()
-    a.extract_policy()
-
+            a.extract_policy()
             
+            # print_learning_curve(tntcomplete)
+            a.play(False, False)
+
+            games_cleaned = a.play_many(10)
+                
+            # games_cleaned = remove_outliers(games)
+
+            # mean timesteps taken
+            s = time.time()
+            mean_count = round(games_cleaned.mean(),2)
+            e = time.time()
+
+            print("Mean count: ", mean_count, "max", games_cleaned.max(), "limit", a.play_limit)
+            a.env.env.set_world()
+            print(e-s)
+            hist.append(mean_count)
+
+        plt.title("Timesteps Until Completion for " + option)
+        plt.xlabel("Episode")
+        plt.ylabel("Time Needed to Complete")
+        plt.plot(tntcomplete)
+        plt.show()
+
+
+        plt.title("Rewards for " + option)
+        plt.xlabel("Episode")
+        plt.ylabel("Reward")
+        plt.plot(rewards)
+        plt.show()
+
+        plt.title("Average Completion Time for Arbitrary Worlds")
+        plt.xlabel("Round")
+        plt.ylabel("Avg Completion Time")
+        plt.plot(np.arange(len(hist)), hist)
+        plt.show()
+
+        a.play()
+        a.extract_policy()
+
+    if problem == 'roulette':
+        tntcomplete, rewards = a.sarsa(episodes=10000, alpha=0.01)
+
+        # a.play(False, True)
+        
+        plt.title("Timesteps Until Completion for Roulette")
+        plt.xlabel("Episode")
+        plt.ylabel("Time Needed to Complete")
+        plt.plot(tntcomplete)
+        plt.show()
+
+        pass
+        # plt.title("Rewards for " + option)
+        # plt.xlabel("Episode")
+        # plt.ylabel("Reward")
+        # plt.plot(rewards)
+        # plt.show()

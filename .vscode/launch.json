@@ -12,7 +12,7 @@
             "program": "main.py",
             "console": "integratedTerminal",
             "justMyCode": false, 
-            "args":["-r", "qlearn"]
+            "args":["-p", "grid","-r", "Q Learning"]
         },
 
         {
@@ -22,7 +22,7 @@
             "program": "main.py",
             "console": "integratedTerminal",
             "justMyCode": false, 
-            "args":["-r", "montecarlo"]
+            "args":["-p", "grid","-r", "First Visit Monte Carlo"]
         },
         
         {
@@ -32,7 +32,7 @@
             "program": "main.py",
             "console": "integratedTerminal",
             "justMyCode": false, 
-            "args":["-r", "sarsa"]
+            "args":["-p", "grid","-r", "SARSA"]
         },
         {
             "name": "Run SarsaLambda",
@@ -41,7 +41,16 @@
             "program": "main.py",
             "console": "integratedTerminal",
             "justMyCode": false, 
-            "args":["-r", "sarsalambda"]
+            "args":["-p", "grid","-r", "SARSA(L)"]
+        }, 
+        {
+            "name": "Run Roulette",
+            "type": "python",
+            "request": "launch",
+            "program": "main.py",
+            "console": "integratedTerminal",
+            "justMyCode": false, 
+            "args":["-p", "roulette"]
         }
     ]
 }
