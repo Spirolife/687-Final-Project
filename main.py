@@ -86,7 +86,7 @@ class Agent:
         return timesteps, rewards
             
 
-    def monte_carlo(self, episodes=10000, epsilon='decay'):
+    def monte_carlo(self, episodes=1000, epsilon='decay'):
         returns = {}
         timesteps = []
         rewards = []
@@ -143,7 +143,7 @@ class Agent:
 
         return timesteps, rewards
 
-    def sarsa(self, episodes=1000, gamma=1, alpha=0.1, epsilon='decay'):
+    def sarsa(self, episodes=1000, gamma=0.9, alpha=0.1, epsilon='decay'):
         if epsilon == 'decay':
             def epsilon_fn(x): return 1 / (x + 1)
         else:
