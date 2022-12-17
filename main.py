@@ -47,7 +47,7 @@ class Agent:
 
     TIMEOUT = 1000
 
-    def q_learn(self, episodes=100, gamma=0.9, alpha=0.1, epsilon=0.3):
+    def q_learn(self, episodes=1000, gamma=0.9, alpha=0.1, epsilon=0.3):
         if epsilon == 'decay':
             def epsilon_fn(x): return 1 / (x + 1)
         else:
